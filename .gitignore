@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Database
+backend/medirush.db
+backend/medirush.db-shm
+backend/medirush.db-wal
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# OS
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# GeoJSON source (too large for git)
+*.osm.geojson
+
+# Generated data files
+data/

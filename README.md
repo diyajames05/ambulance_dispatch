@@ -1,4 +1,3 @@
-# ambulance_dispatch
 # Smart Ambulance Dispatch System
 
 A real-time dispatch and triage system designed to optimize patient outcomes by finding the fastest path to the most suitable hospital.
@@ -17,7 +16,6 @@ sudo apt install python3 python3-venv python3-full
 ```
 
 Verify:
-
 ```bash
 python3 --version
 ```
@@ -68,12 +66,10 @@ Open `http://localhost:3001` in your browser.
 **1. Install Python 3.10+**
 
 Download the installer from [python.org](https://www.python.org/downloads/). During installation:
-
 - Check "Add python.exe to PATH"
 - Check "Use admin privileges when installing py.exe"
 
 Verify in a new terminal (Command Prompt or PowerShell):
-
 ```cmd
 python --version
 ```
@@ -90,21 +86,18 @@ If you don't have Git, download it from [git-scm.com](https://git-scm.com).
 **3. Create and activate a virtual environment**
 
 Command Prompt:
-
 ```cmd
 python -m venv venv
 venv\Scripts\activate
 ```
 
 PowerShell:
-
 ```powershell
 python -m venv venv
 venv\Scripts\Activate.ps1
 ```
 
 If PowerShell blocks the script, run this first:
-
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
@@ -190,18 +183,17 @@ smart_ambulance_dispatch/
 
 Located at `backend/.env`.
 
-| Variable     | Default                                    | Description                                                  |
-| ------------ | ------------------------------------------ | ------------------------------------------------------------ |
-| `PORT`       | `3001`                                     | Server port                                                  |
-| `JWT_SECRET` | `medirush_jwt_secret_change_in_production` | JWT signing secret — change this in production               |
-| `SMTP_HOST`  | —                                          | SMTP server hostname. Leave blank to print OTPs to the console |
-| `SMTP_PORT`  | `587`                                      | SMTP port                                                    |
-| `SMTP_USER`  | —                                          | SMTP username / email address                                |
-| `SMTP_PASS`  | —                                          | SMTP password or app password                                |
-| `FROM_EMAIL` | —                                          | Sender address (defaults to `SMTP_USER` if not set)          |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `3001` | Server port |
+| `JWT_SECRET` | `medirush_jwt_secret_change_in_production` | JWT signing secret — change this in production |
+| `SMTP_HOST` | — | SMTP server hostname. Leave blank to print OTPs to the console |
+| `SMTP_PORT` | `587` | SMTP port |
+| `SMTP_USER` | — | SMTP username / email address |
+| `SMTP_PASS` | — | SMTP password or app password |
+| `FROM_EMAIL` | — | Sender address (defaults to `SMTP_USER` if not set) |
 
 Example Gmail configuration:
-
 ```
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587

@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MediRush — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ── Top Navigation ────────────────────────────────────────────────────────── */
+.topnav {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 16px; display: flex; align-items: center; gap: 4px;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  height: 54px;
+}
+.nav-brand {
+  display: flex; align-items: center; gap: 8px; margin-right: 12px; flex-shrink: 0;
+  text-decoration: none; color: inherit;
+}
+.nav-brand-icon {
+  width: 32px; height: 32px; background: var(--red); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.nav-brand-name { font-family: 'DM Serif Display', serif; font-size: 16px; }
+.nav-tabs { display: flex; align-items: center; gap: 2px; flex: 1; }
+.nav-tab {
+  padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  color: var(--mid); text-decoration: none; cursor: pointer; border: none;
+  background: none; font-family: 'DM Sans', sans-serif;
+  display: flex; align-items: center; gap: 5px; transition: all .15s;
+  white-space: nowrap;
+}
+.nav-tab:hover  { background: var(--bg); color: var(--text); }
+.nav-tab.active { background: var(--red-bg); color: var(--red); }
+.nav-right { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
+.nav-user  { font-size: 12px; color: var(--light); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-signout {
+  padding: 7px 12px; border: 1.5px solid var(--border); border-radius: 7px;
+  font-size: 12px; font-weight: 600; color: var(--mid); cursor: pointer;
+  background: none; font-family: 'DM Sans', sans-serif; transition: all .15s;
+  white-space: nowrap;
+}
+.nav-signout:hover { border-color: var(--red); color: var(--red); }
+@media (max-width: 480px) {
+  .nav-user { display: none; }
+  .nav-tab  { padding: 8px 9px; font-size: 12px; }
+}
+
+/* ── Section layout ────────────────────────────────────────────────────────── */
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── Booking: Progress bar ─────────────────────────────────────────────────── */
+.prog-wrap {
+  background: var(--surface); border-bottom: 1px solid var(--border); padding: 11px 20px;
+}
+.prog-steps { display: flex; align-items: center; max-width: 480px; margin: 0 auto; }
+.ps  { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+.ps-c {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--border); color: var(--light);
+  font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; transition: all .25s;
+}
+.ps.active .ps-c { background: var(--red); color: white; box-shadow: 0 0 0 3px rgba(214,48,49,.15); }
+.ps.done   .ps-c { background: var(--green); color: white; }
+.ps-l { font-size: 10px; font-weight: 600; color: var(--light); white-space: nowrap; }
+.ps.active .ps-l { color: var(--red); }
+.ps.done   .ps-l { color: var(--green); }
+.ps-line { flex: 1; height: 2px; background: var(--border); margin-bottom: 14px; transition: background .3s; }
+.ps-line.done { background: var(--green); }
+
+/* ── Booking: Screens ──────────────────────────────────────────────────────── */
+.book-main { max-width: 560px; margin: 0 auto; padding: 20px 14px 60px; }
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* Location row */
+.loc-row { display: flex; gap: 8px; }
+.loc-row .fi { flex: 1; }
+.gps-btn {
+  flex-shrink: 0; padding: 0 13px;
+  background: var(--blue-bg); border: 1.5px solid #cce0ff;
+  border-radius: 9px; color: var(--blue);
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: background .2s;
+  display: flex; align-items: center; gap: 5px;
+}
+.gps-btn:hover { background: #ddeeff; }
+
+/* ── Emergency type grid ───────────────────────────────────────────────────── */
+.type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+.type-tile {
+  background: var(--surface); border: 2px solid var(--border); border-radius: 12px;
+  padding: 13px 11px 11px; cursor: pointer; transition: all .15s;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 7px;
+  position: relative; user-select: none;
+}
+.type-tile:active { transform: scale(.97); }
+.type-tile:hover  { border-color: var(--tc,#bbb); box-shadow: 0 3px 12px rgba(0,0,0,.08); transform: translateY(-1px); }
+.type-tile.sel    { border-color: var(--tc,#bbb); background: var(--tbg,#fafafa); box-shadow: 0 0 0 3px var(--tglow,rgba(0,0,0,.05)); }
+.type-tile::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  background: var(--tc,transparent); border-radius: 12px 0 0 12px;
+  opacity: 0; transition: opacity .2s;
+}
+.type-tile.sel::before, .type-tile:hover::before { opacity: 1; }
+.tile-icon  { font-size: 28px; line-height: 1; transition: transform .15s; }
+.type-tile:hover .tile-icon, .type-tile.sel .tile-icon { transform: scale(1.08); }
+.tile-name  { font-size: 14px; font-weight: 700; line-height: 1.1; }
+.tile-hint  { font-size: 11px; color: var(--light); line-height: 1.3; }
+.tile-amb   { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; margin-top: 2px; background: rgba(0,0,0,.06); color: var(--mid); letter-spacing: .3px; }
+.type-tile.sel .tile-amb { background: var(--tc); color: white; }
+.tile-badge { position: absolute; top: 8px; right: 0; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px 0 0 4px; border-right: none; letter-spacing: .3px; }
+.badge-red    { background: #fff0f0; color: #b02020; border: 1px solid #ffd5d5; }
+.badge-yellow { background: #fff8e1; color: #7a5000; border: 1px solid #ffe082; }
+.tile-check   { position: absolute; top: 8px; left: 9px; width: 17px; height: 17px; border-radius: 50%; background: var(--tc,#aaa); color: white; font-size: 9px; display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(.3); transition: all .18s; }
+.type-tile.sel .tile-check { opacity: 1; transform: scale(1); }
+
+/* ── Ambulance info banner ─────────────────────────────────────────────────── */
+.amb-info { display: none; margin-top: 10px; background: var(--blue-bg); border: 1.5px solid #cce0ff; border-radius: 10px; padding: 12px 14px; animation: fadeup .2s ease; }
+.amb-info.show { display: flex; gap: 12px; align-items: flex-start; }
+@keyframes fadeup { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.amb-icon  { font-size: 26px; flex-shrink: 0; }
+.amb-title { font-size: 13px; font-weight: 700; color: var(--blue); margin-bottom: 2px; }
+.amb-desc  { font-size: 12px; color: var(--mid); line-height: 1.5; }
+
+/* ── Severity ──────────────────────────────────────────────────────────────── */
+.level-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; }
+@media (max-width: 360px) { .level-grid { grid-template-columns: repeat(4,1fr); } }
+.lvl-btn {
+  aspect-ratio: 1; border-radius: 10px; border: 2px solid var(--border);
+  background: white; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  transition: all .14s; user-select: none;
+}
+.lvl-btn:hover { border-color: var(--lc); transform: translateY(-1px); }
+.lvl-btn.sel   { border-color: var(--lc); background: var(--lc); transform: translateY(-2px); box-shadow: 0 3px 10px rgba(0,0,0,.14); }
+.lvl-num  { font-size: 19px; font-weight: 700; color: var(--lc); line-height: 1; }
+.lvl-word { font-size: 7px; font-weight: 700; text-transform: uppercase; color: var(--light); text-align: center; line-height: 1.2; }
+.lvl-btn.sel .lvl-num, .lvl-btn.sel .lvl-word { color: white; }
+.ldesc { margin-top: 9px; padding: 10px 13px; background: var(--blue-bg); border: 1px solid #cce0ff; border-radius: 8px; font-size: 13px; color: var(--mid); line-height: 1.5; display: none; }
+.ldesc.show { display: block; }
+
+/* Description area */
+.desc-toggle { display: flex; align-items: center; gap: 7px; margin-top: 14px; font-size: 13px; font-weight: 600; color: var(--blue); background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; padding: 0; }
+.desc-toggle:hover { text-decoration: underline; }
+.desc-required { display: none; margin-top: 12px; }
+.desc-required.show { display: block; }
+.desc-req-label { font-size: 13px; font-weight: 600; color: var(--red); margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
+.desc-optional { display: none; margin-top: 10px; }
+.desc-optional.show { display: block; }
+
+/* ── Summary ───────────────────────────────────────────────────────────────── */
+.sum-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+.sum-row:last-child { border-bottom: none; }
+.sum-key { font-size: 12px; color: var(--light); font-weight: 500; min-width: 90px; }
+.sum-val { font-size: 13px; font-weight: 600; text-align: right; line-height: 1.4; max-width: 260px; }
+.lvl-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; color: white; }
+.amb-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; background: var(--blue-bg); color: var(--blue); border: 1px solid #cce0ff; }
+
+/* ── Confirmation screen ───────────────────────────────────────────────────── */
+.conf-icon  { width: 68px; height: 68px; background: var(--green-bg); border: 3px solid var(--green); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 34px; margin: 0 auto 14px; animation: pop .35s ease; }
+@keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.conf-title { font-family: 'DM Serif Display', serif; font-size: 24px; text-align: center; margin-bottom: 5px; }
+.conf-sub   { font-size: 13px; color: var(--mid); text-align: center; line-height: 1.6; margin-bottom: 20px; }
+
+.eta-box { background: var(--red-bg); border: 1.5px solid var(--red-border); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.eta-icon { font-size: 32px; }
+.eta-lbl  { font-size: 10px; color: var(--light); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+.eta-val  { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--red); line-height: 1.1; }
+.eta-unit { font-size: 12px; color: var(--mid); font-weight: 500; }
+.eta-cd   { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--red); text-align: right; white-space: nowrap; }
+
+/* Tracking timeline */
+.tracking-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 12px; }
+.tk-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.tk-id  { font-size: 12px; color: var(--light); }
+.tk-id strong { font-family: monospace; font-size: 13px; color: var(--text); background: var(--bg); padding: 2px 6px; border-radius: 4px; margin-left: 3px; }
+.live-badge { display: flex; align-items: center; gap: 5px; background: var(--green-bg); border: 1px solid #b2ead8; color: var(--green); font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+.live-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: blink 1.2s ease-in-out infinite; }
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .2; } }
+.timeline { display: flex; flex-direction: column; }
+.tl { display: flex; gap: 12px; }
+.tl-left { display: flex; flex-direction: column; align-items: center; width: 26px; flex-shrink: 0; }
+.tl-c    { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid var(--border); background: white; flex-shrink: 0; z-index: 1; transition: all .3s; }
+.tl.done .tl-c { background: var(--green); border-color: var(--green); color: white; }
+.tl.curr .tl-c { background: var(--red);   border-color: var(--red);   color: white; animation: ptl 1.5s ease-in-out infinite; }
+@keyframes ptl { 0%,100% { box-shadow: 0 0 0 0 rgba(214,48,49,.3); } 50% { box-shadow: 0 0 0 6px rgba(214,48,49,0); } }
+.tl-line  { width: 2px; flex: 1; min-height: 20px; background: var(--border); margin: 0 auto; transition: background .3s; }
+.tl.done .tl-line { background: var(--green); }
+.tl-body  { padding-bottom: 18px; flex: 1; }
+.tl-title { font-size: 13px; font-weight: 600; margin-bottom: 1px; }
+.tl.pend .tl-title { color: var(--light); }
+.tl-desc  { font-size: 11px; color: var(--light); }
+.tl-time  { font-size: 11px; color: var(--green); font-weight: 600; margin-top: 1px; }
+.tl.pend .tl-time { color: var(--light); }
+
+/* Location picker map (S1) */
+#loc-picker-map { z-index: 1; }
+#loc-picker-map .leaflet-container { border-radius: 9px; }
+
+/* Live dispatch map (replaces GPS placeholder) */
+#dispatch-map {
+  width: 100%; height: 350px; border-radius: var(--radius);
+  border: 1px solid var(--border); margin-bottom: 12px;
+}
+.map-result {
+  background: var(--green-bg); border: 1px solid #b2ead8; border-radius: 10px;
+  padding: 14px; margin-bottom: 12px;
+}
+.map-result h4 { font-size: 14px; color: #007a5e; margin-bottom: 8px; }
+.map-result-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+.map-result-row .mr-label { color: var(--mid); }
+.map-result-row .mr-value { font-weight: 600; }
+.map-legend { display: flex; gap: 16px; margin-bottom: 12px; font-size: 12px; color: var(--mid); }
+.map-legend-item { display: flex; align-items: center; gap: 5px; }
+.map-legend-swatch { width: 20px; height: 3px; border-radius: 2px; }
+.pulse-marker {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--red); border: 3px solid white;
+  box-shadow: 0 0 0 0 rgba(214,48,49,.5);
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(214,48,49,.5); }
+  100% { box-shadow: 0 0 0 16px rgba(214,48,49,0); }
+}
+.amb-icon-marker { font-size: 22px; line-height: 1; filter: drop-shadow(0 1px 3px rgba(0,0,0,.3)); }
+
+/* Advice + call-direct */
+.advice { background: #fffbf0; border: 1px solid #ffe8a0; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+.advice-title { font-size: 13px; font-weight: 700; color: #7a5000; margin-bottom: 8px; }
+.advice ul    { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+.advice li    { font-size: 12px; color: #5a4000; display: flex; align-items: flex-start; gap: 6px; line-height: 1.4; }
+.advice li::before { content: '✓'; color: #e6a800; font-weight: 700; flex-shrink: 0; }
+.call-direct { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 12px; background: white; border: 1.5px solid var(--border); border-radius: 9px; color: var(--mid); font-size: 14px; font-weight: 600; text-decoration: none; transition: border-color .2s; }
+.call-direct:hover { border-color: #aaa; }
+
+/* ── History section ───────────────────────────────────────────────────────── */
+.hist-main { max-width: 560px; margin: 0 auto; padding: 20px 14px 60px; }
+.hist-heading { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 4px; }
+.hist-sub     { font-size: 13px; color: var(--light); margin-bottom: 18px; }
+.booking-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+.bk-header    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.bk-id   { font-family: monospace; font-size: 13px; font-weight: 700; background: var(--bg); padding: 2px 7px; border-radius: 5px; }
+.bk-date { font-size: 12px; color: var(--light); }
+.bk-type { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.bk-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
+.bk-sev  { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; color: white; }
+.bk-eta  { font-size: 12px; color: var(--mid); font-weight: 500; }
+.bk-unit { font-size: 12px; color: var(--mid); }
+.bk-loc  { font-size: 12px; color: var(--light); display: flex; align-items: center; gap: 4px; }
+.empty-state { text-align: center; padding: 48px 20px; color: var(--light); }
+.empty-icon  { font-size: 48px; margin-bottom: 12px; }
+.empty-title { font-size: 16px; font-weight: 600; color: var(--mid); margin-bottom: 6px; }
+.empty-sub   { font-size: 13px; line-height: 1.5; }
+.hist-loading { text-align: center; padding: 48px 20px; color: var(--light); font-size: 14px; }
+
+/* ── Preferences section ───────────────────────────────────────────────────── */
+.pref-main { max-width: 560px; margin: 0 auto; padding: 20px 14px 60px; }
+.pref-heading { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 4px; }
+.pref-sub     { font-size: 13px; color: var(--light); margin-bottom: 18px; }
+.pref-section-title { font-size: 14px; font-weight: 700; color: var(--mid); margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
+.save-success { display: none; align-items: center; gap: 6px; font-size: 13px; color: var(--green); font-weight: 600; margin-top: 12px; }
+.save-success.show { display: flex; }
+</style>
+</head>
+<body>
+
+<div class="banner">🚨 Life-threatening? Call <a href="tel:108">108</a> — don't wait.</div>
+
+<!-- ── Top Navigation ────────────────────────────────────────────────────────── -->
+<nav class="topnav">
+  <a class="nav-brand" onclick="navigate('book')" style="cursor:pointer">
+    <div class="nav-brand-icon">🚑</div>
+    <div class="nav-brand-name">MediRush</div>
+  </a>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-section="book"        onclick="navigate('book')">        🚑 Book</button>
+    <button class="nav-tab"        data-section="history"     onclick="navigate('history')">     📋 History</button>
+    <button class="nav-tab"        data-section="preferences" onclick="navigate('preferences')"> ⚙️ Preferences</button>
+  </div>
+  <div class="nav-right">
+    <span class="nav-user" id="nav-user-email"></span>
+    <button class="nav-signout" onclick="signOut()">Sign Out</button>
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+     SECTION: Book Ambulance
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="section active" id="section-book">
+
+  <!-- Progress bar -->
+  <div class="prog-wrap" id="prog-wrap">
+    <div class="prog-steps">
+      <div class="ps active" id="ps1"><div class="ps-c" id="pc1">1</div><div class="ps-l">Who & Where</div></div>
+      <div class="ps-line" id="pl1"></div>
+      <div class="ps" id="ps2" style="opacity:.4"><div class="ps-c" id="pc2">2</div><div class="ps-l">Emergency</div></div>
+      <div class="ps-line" id="pl2"></div>
+      <div class="ps" id="ps3" style="opacity:.4"><div class="ps-c" id="pc3">3</div><div class="ps-l">Confirm</div></div>
+    </div>
+  </div>
+
+  <div class="book-main">
+
+    <!-- S1: Who & Where -->
+    <div class="screen active" id="s1">
+      <div class="card">
+        <div class="card-title">Who needs help?</div>
+        <div class="card-sub">Fill in contact and location details.</div>
+        <div class="frow">
+          <div class="fg">
+            <div class="fl">👤 Full Name</div>
+            <input class="fi" id="f-name" type="text" placeholder="John Smith" autocomplete="name">
+            <div class="ferr" id="e-name">Please enter a name.</div>
+          </div>
+          <div class="fg">
+            <div class="fl">📞 Phone</div>
+            <input class="fi" id="f-phone" type="tel" placeholder="+91 98765 43210" autocomplete="tel">
+            <div class="ferr" id="e-phone">Please enter a phone number.</div>
+          </div>
+        </div>
+        <div class="fg">
+          <div class="fl">📍 Location</div>
+          <div style="font-size:11px;color:var(--light);margin-bottom:6px;">Type a road name to search, or click on the map to set your location.</div>
+          <div style="position:relative;">
+            <input class="fi" id="f-loc-search" type="text" placeholder="Search road name, e.g. Anna Salai" autocomplete="off" style="margin-bottom:4px;">
+            <div id="loc-suggestions" style="position:absolute;top:100%;left:0;right:0;z-index:999;background:white;border:1px solid var(--border);border-radius:0 0 9px 9px;max-height:160px;overflow-y:auto;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+          </div>
+          <div id="loc-picker-map" style="width:100%;height:260px;border-radius:9px;border:1.5px solid var(--border);margin-bottom:8px;"></div>
+          <input class="fi" id="f-loc" type="text" placeholder="← Click the map or search above" readonly style="font-size:13px;color:var(--mid);">
+          <div class="ferr" id="e-loc">Please select your location on the map.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary" onclick="toS2()">Continue →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- S2: Emergency Type + Severity -->
+    <div class="screen" id="s2">
+      <div class="card">
+        <div class="card-title">What's the emergency?</div>
+        <div class="card-sub">Tap to select. Each option automatically determines the right ambulance type.</div>
+
+        <div class="sec-divider">Emergency Type</div>
+        <div class="type-grid" id="type-grid">
+          <div class="type-tile" data-type="Cardiac" data-amb="ALS Cardiac Unit" data-amb-icon="🫀" data-amb-desc="Advanced Life Support unit with cardiac defibrillator, ECG monitor, and cardiac-trained paramedics." data-other="false" style="--tc:#e74c3c;--tbg:#fff5f5;--tglow:rgba(231,76,60,0.12)" onclick="selType(this)">
+            <div class="tile-check">✓</div><span class="tile-badge badge-red">Critical</span>
+            <div class="tile-icon">❤️</div><div class="tile-name">Cardiac</div>
+            <div class="tile-hint">Heart attack, chest pain, cardiac arrest</div><div class="tile-amb">🚑 ALS Cardiac</div>
+          </div>
+          <div class="type-tile" data-type="Breathing" data-amb="ALS Respiratory Unit" data-amb-icon="🫁" data-amb-desc="Advanced Life Support unit with ventilator, oxygen supply, and airway management equipment." data-other="false" style="--tc:#e74c3c;--tbg:#fff5f5;--tglow:rgba(231,76,60,0.12)" onclick="selType(this)">
+            <div class="tile-check">✓</div><span class="tile-badge badge-red">Critical</span>
+            <div class="tile-icon">🫁</div><div class="tile-name">Breathing</div>
+            <div class="tile-hint">Difficulty breathing, choking, asthma</div><div class="tile-amb">🚑 ALS Respiratory</div>
+          </div>
+          <div class="type-tile" data-type="Trauma / Accident" data-amb="Trauma Ambulance" data-amb-icon="🩹" data-amb-desc="Trauma unit with spine board, splints, haemorrhage control kit, and trauma-trained paramedics." data-other="false" style="--tc:#f39c12;--tbg:#fffbf0;--tglow:rgba(243,156,18,0.12)" onclick="selType(this)">
+            <div class="tile-check">✓</div><span class="tile-badge badge-yellow">Common</span>
+            <div class="tile-icon">🚗</div><div class="tile-name">Trauma / Accident</div>
+            <div class="tile-hint">Road accident, fall, serious injury</div><div class="tile-amb">🚑 Trauma Unit</div>
+          </div>
+          <div class="type-tile" data-type="Unconscious / Stroke" data-amb="ALS Neuro Unit" data-amb-icon="🧠" data-amb-desc="Neurological ALS unit with stroke protocol equipment and rapid CT-ready transport capability." data-other="false" style="--tc:#f39c12;--tbg:#fffbf0;--tglow:rgba(243,156,18,0.12)" onclick="selType(this)">
+            <div class="tile-check">✓</div><span class="tile-badge badge-yellow">Common</span>
+            <div class="tile-icon">🧠</div><div class="tile-name">Unconscious / Stroke</div>
+            <div class="tile-hint">Collapsed, unresponsive, stroke signs</div><div class="tile-amb">🚑 ALS Neuro</div>
+          </div>
+          <div class="type-tile" data-type="Infant / Child" data-amb="Paediatric Ambulance" data-amb-icon="👶" data-amb-desc="Paediatric unit with child-sized equipment, neonatal incubator, and paediatric-trained paramedics." data-other="false" style="--tc:#9b59b6;--tbg:#faf5ff;--tglow:rgba(155,89,182,0.12)" onclick="selType(this)">
+            <div class="tile-check">✓</div>
+            <div class="tile-icon">👶</div><div class="tile-name">Infant / Child</div>
+            <div class="tile-hint">Baby or child emergency, neonatal</div><div class="tile-amb">🚑 Paediatric</div>
+          </div>
+          <div class="type-tile" data-type="Maternity" data-amb="Maternity Ambulance" data-amb-icon="🤰" data-amb-desc="Maternity unit equipped for delivery en route, with midwife-trained crew and neonatal support kit." data-other="false" style="--tc:#e84393;--tbg:#fff0f8;--tglow:rgba(232,67,147,0.10)" onclick="selType(this)">
+            <div class="tile-check">✓</div>
+            <div class="tile-icon">🤰</div><div class="tile-name">Maternity</div>
+            <div class="tile-hint">Labour, pregnancy emergency</div><div class="tile-amb">🚑 Maternity Unit</div>
+          </div>
+          <div class="type-tile" data-type="General Medical" data-amb="BLS Ambulance" data-amb-icon="🩺" data-amb-desc="Basic Life Support unit for non-critical medical situations — fever, allergy, general illness." data-other="false" style="--tc:#3498db;--tbg:#f0f6ff;--tglow:rgba(52,152,219,0.10)" onclick="selType(this)">
+            <div class="tile-check">✓</div>
+            <div class="tile-icon">🩺</div><div class="tile-name">General Medical</div>
+            <div class="tile-hint">Fever, allergy, seizure, illness</div><div class="tile-amb">🚑 BLS Unit</div>
+          </div>
+          <div class="type-tile" data-type="Other" data-amb="BLS Ambulance" data-amb-icon="🆘" data-amb-desc="Standard ambulance dispatched. Please describe your situation so we can send the right unit." data-other="true" style="--tc:#636e72;--tbg:#f8f9fa;--tglow:rgba(99,110,114,0.10)" onclick="selType(this)">
+            <div class="tile-check">✓</div>
+            <div class="tile-icon">🆘</div><div class="tile-name">Other</div>
+            <div class="tile-hint">Burns, poisoning, mental health crisis</div><div class="tile-amb">🚑 Describe below</div>
+          </div>
+        </div>
+        <div class="ferr" id="e-type">Please select an emergency type.</div>
+
+        <div class="amb-info" id="amb-info">
+          <div class="amb-icon" id="amb-icon">🚑</div>
+          <div><div class="amb-title" id="amb-title">Ambulance type</div><div class="amb-desc" id="amb-desc">Description</div></div>
+        </div>
+
+        <div class="desc-required" id="desc-required">
+          <div class="desc-req-label">✏️ Describe the emergency <span style="font-size:11px;font-weight:500;color:var(--red)">(required)</span></div>
+          <textarea class="fta" id="f-desc-req" placeholder="e.g. Patient swallowed unknown pills 20 mins ago, now drowsy. Male, 30."></textarea>
+          <div class="ferr" id="e-desc">Please describe the emergency.</div>
+        </div>
+        <button class="desc-toggle" id="desc-toggle" onclick="toggleDesc()" style="display:none">
+          <span id="dtoggle-icon">＋</span> Add more detail (optional)
+        </button>
+        <div class="desc-optional" id="desc-optional">
+          <div style="font-size:11px;color:var(--light);margin-bottom:5px;">Patient age, known conditions, what happened</div>
+          <textarea class="fta" id="f-desc-opt" placeholder="e.g. Female, 65, diabetic. Collapsed after chest pain started 10 mins ago."></textarea>
+        </div>
+
+        <div class="sec-divider" style="margin-top:18px">Severity Level <span style="font-weight:400;font-size:10px;text-transform:none;letter-spacing:0">(1 = minor · 7 = life-threatening)</span></div>
+        <div class="level-grid" id="level-grid"></div>
+        <div class="ferr" id="e-level">Please select a severity level.</div>
+        <div class="ldesc" id="ldesc"></div>
+
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="toS1()">←</button>
+          <button class="btn-primary" onclick="toS3()">Review →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- S3: Review -->
+    <div class="screen" id="s3">
+      <div class="card">
+        <div class="card-title">Review & Send</div>
+        <div class="card-sub">Check everything before sending your request.</div>
+        <div id="summary"></div>
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn-secondary" onclick="toS2()">← Edit</button>
+          <button class="btn-primary" id="submit-btn" onclick="submitBooking()">🚑 Send Request</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- S4: Confirmed -->
+    <div class="screen" id="s4">
+      <div class="card" style="text-align:center">
+        <div class="conf-icon">✅</div>
+        <div class="conf-title">Help is on the way!</div>
+        <div class="conf-sub">Your request is received and an ambulance has been dispatched. Stay calm and follow the tips below.</div>
+      </div>
+
+      <div class="eta-box">
+        <div class="eta-icon">🚑</div>
+        <div>
+          <div class="eta-lbl">Estimated Arrival</div>
+          <div class="eta-val" id="eta-val">—</div>
+          <div class="eta-unit" id="eta-unit">—</div>
+        </div>
+        <div class="eta-cd" id="eta-cd">—</div>
+      </div>
+
+      <div class="tracking-card">
+        <div class="tk-hdr">
+          <div class="tk-id">Request ID: <strong id="req-id">—</strong></div>
+          <div class="live-badge"><div class="live-dot"></div> Live</div>
+        </div>
+        <div class="timeline">
+          <div class="tl done">
+            <div class="tl-left"><div class="tl-c">✓</div><div class="tl-line"></div></div>
+            <div class="tl-body"><div class="tl-title">Request Received</div><div class="tl-desc">Logged in system.</div><div class="tl-time">Just now</div></div>
+          </div>
+          <div class="tl done">
+            <div class="tl-left"><div class="tl-c">✓</div><div class="tl-line"></div></div>
+            <div class="tl-body"><div class="tl-title">Ambulance Assigned</div><div class="tl-desc" id="tl-assigned">—</div><div class="tl-time">Just now</div></div>
+          </div>
+          <div class="tl curr" id="tl-enroute">
+            <div class="tl-left"><div class="tl-c">🚑</div><div class="tl-line"></div></div>
+            <div class="tl-body"><div class="tl-title">En Route to You</div><div class="tl-desc">Ambulance heading to your location.</div><div class="tl-time">In progress...</div></div>
+          </div>
+          <div class="tl pend" id="tl-arrive">
+            <div class="tl-left"><div class="tl-c">📍</div><div class="tl-line"></div></div>
+            <div class="tl-body"><div class="tl-title">Arriving at Location</div><div class="tl-desc">Ambulance reached your address.</div><div class="tl-time">Est. <span id="tl-eta-txt">—</span></div></div>
+          </div>
+          <div class="tl pend" id="tl-care">
+            <div class="tl-left"><div class="tl-c">🏥</div></div>
+            <div class="tl-body"><div class="tl-title">Patient Receiving Care</div><div class="tl-desc">Medical team attending patient.</div><div class="tl-time">Pending</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live dispatch map -->
+      <div class="map-legend">
+        <div class="map-legend-item"><div class="map-legend-swatch" style="background:#0066cc;"></div> Ambulance to You</div>
+        <div class="map-legend-item"><div class="map-legend-swatch" style="background:#00b894;"></div> You to Hospital</div>
+      </div>
+      <div id="dispatch-map"></div>
+      <div id="map-result-container"></div>
+
+      <div class="advice">
+        <div class="advice-title">⚠️ While you wait</div>
+        <ul id="advice-list">
+          <li>Keep patient still and calm. Don't move them unless there is immediate danger.</li>
+          <li>Unlock the front door or go outside to flag the ambulance.</li>
+          <li>Have any medications or medical cards ready for paramedics.</li>
+          <li>Don't give food, water or medication unless instructed.</li>
+          <li>Keep your phone on — dispatcher may call to confirm details.</li>
+        </ul>
+      </div>
+
+      <a href="tel:108" class="call-direct">📞 Call Emergency Services Directly (108)</a>
+
+      <div style="margin-top:14px;text-align:center">
+        <button class="btn-secondary" onclick="resetBooking()" style="width:100%">Book Another Ambulance</button>
+      </div>
+    </div>
+
+  </div><!-- /book-main -->
+</div><!-- /section-book -->
+
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+     SECTION: History
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="section" id="section-history">
+  <div class="hist-main">
+    <div class="hist-heading">Booking History</div>
+    <div class="hist-sub">Your past ambulance dispatch requests.</div>
+    <div id="history-list"><div class="hist-loading">Loading...</div></div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+     SECTION: Preferences
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="section" id="section-preferences">
+  <div class="pref-main">
+    <div class="pref-heading">Preferences</div>
+    <div class="pref-sub">Manage your account and medical profile.</div>
+
+    <!-- Account -->
+    <div class="card">
+      <div class="pref-section-title">🔑 Account</div>
+      <div class="fg">
+        <div class="fl">📧 Email address</div>
+        <input class="fi" id="pref-email" type="email" disabled>
+      </div>
+    </div>
+
+    <!-- Personal info + medical profile (single save) -->
+    <div class="card">
+      <div class="pref-section-title">👤 Personal Information</div>
+      <div class="frow">
+        <div class="fg">
+          <div class="fl">Full Name</div>
+          <input class="fi" id="pref-name" type="text" placeholder="John Smith">
+        </div>
+        <div class="fg">
+          <div class="fl">Phone</div>
+          <input class="fi" id="pref-phone" type="tel" placeholder="+91 98765 43210">
+        </div>
+      </div>
+
+      <div class="pref-section-title" style="margin-top:6px">🏥 Medical Profile</div>
+      <div class="fg">
+        <div class="fl">🩸 Blood Type</div>
+        <select class="fselect" id="pref-blood">
+          <option value="">Select blood type</option>
+          <option>A+</option><option>A−</option>
+          <option>B+</option><option>B−</option>
+          <option>AB+</option><option>AB−</option>
+          <option>O+</option><option>O−</option>
+          <option>Unknown</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">⚠️ Known Allergies</div>
+        <textarea class="fta" id="pref-allergies" placeholder="e.g. Penicillin, peanuts" style="min-height:70px"></textarea>
+      </div>
+      <div class="fg">
+        <div class="fl">💊 Current Medications</div>
+        <textarea class="fta" id="pref-medications" placeholder="e.g. Metformin 500 mg" style="min-height:70px"></textarea>
+      </div>
+      <div class="fg">
+        <div class="fl">🏥 Medical Conditions</div>
+        <textarea class="fta" id="pref-conditions" placeholder="e.g. Type 2 diabetes, hypertension" style="min-height:70px"></textarea>
+      </div>
+
+      <div class="sec-divider">Emergency Contact</div>
+      <div class="frow">
+        <div class="fg">
+          <div class="fl">Contact Name</div>
+          <input class="fi" id="pref-ec-name" type="text" placeholder="Jane Smith">
+        </div>
+        <div class="fg">
+          <div class="fl">Contact Phone</div>
+          <input class="fi" id="pref-ec-phone" type="tel" placeholder="+91 98765 00000">
+        </div>
+      </div>
+
+      <div class="alert alert-error" id="pref-error"></div>
+      <div class="save-success" id="pref-success">✅ Profile saved successfully.</div>
+
+      <div class="btn-row">
+        <button class="btn-primary" id="pref-save-btn" onclick="savePreferences()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────────────
+const levels = [
+  null,
+  { word:'Minor',    color:'#27ae60', eta:18, desc:'Small cut or bruise. Patient stable and conscious.' },
+  { word:'Mild',     color:'#2ecc71', eta:15, desc:'Moderate pain or minor injury. Stable but needs attention.' },
+  { word:'Moderate', color:'#f1c40f', eta:12, desc:'Persistent pain, possible fracture. Patient conscious.' },
+  { word:'Serious',  color:'#f39c12', eta:10, desc:'Severe pain, difficulty breathing, significant injury.' },
+  { word:'Urgent',   color:'#e67e22', eta:7,  desc:'Loss of consciousness, chest pain, severe reaction.' },
+  { word:'Critical', color:'#e74c3c', eta:5,  desc:'Unresponsive, suspected heart attack or stroke.' },
+  { word:'Extreme',  color:'#922b21', eta:3,  desc:'Cardiac arrest or life-threatening trauma. Maximum priority.' },
+];
+const unitPool = ['AMB-03','AMB-05','AMB-07','AMB-09','AMB-11'];
+
+// ── State ────────────────────────────────────────────────────────────────────
+let selLevel   = null;
+let selTile    = null;
+let userProfile = null;
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  const token = localStorage.getItem('medirush_token');
+  if (!token) { window.location.href = '/'; return; }
+
+  const user = JSON.parse(localStorage.getItem('medirush_user') || '{}');
+  document.getElementById('nav-user-email').textContent = user.email || '';
+
+  buildLevelGrid();
+  await loadProfile();
+  prefillBookingForm();
+  initLocationPicker();
+
+  // Section routing via URL hash
+  const initial = window.location.hash.slice(1) || 'book';
+  navigate(initial, true);
+  window.addEventListener('hashchange', () => navigate(window.location.hash.slice(1) || 'book', true));
+});
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function navigate(section, skipHash) {
+  if (!['book','history','preferences'].includes(section)) section = 'book';
+  if (!skipHash) window.location.hash = section;
+
+  document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+  document.getElementById('section-' + section).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.section === section));
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (section === 'book')        setTimeout(() => { if (locPickerMap) locPickerMap.invalidateSize(); }, 100);
+  if (section === 'history')     loadHistory();
+  if (section === 'preferences') loadPreferences();
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function authHeaders() {
+  return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('medirush_token') };
+}
+
+function signOut() {
+  localStorage.removeItem('medirush_token');
+  localStorage.removeItem('medirush_user');
+  window.location.href = '/';
+}
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+async function loadProfile() {
+  try {
+    const res = await fetch('/api/user/profile', { headers: authHeaders() });
+    if (res.status === 401) { signOut(); return; }
+    userProfile = await res.json();
+  } catch { /* silent fail — prefill stays empty */ }
+}
+
+function prefillBookingForm() {
+  if (!userProfile) return;
+  const nameEl  = document.getElementById('f-name');
+  const phoneEl = document.getElementById('f-phone');
+  if (nameEl  && userProfile.full_name) nameEl.value  = userProfile.full_name;
+  if (phoneEl && userProfile.phone)     phoneEl.value = userProfile.phone;
+}
+
+// ── Build level grid (booking step 2) ────────────────────────────────────────
+function buildLevelGrid() {
+  const grid = document.getElementById('level-grid');
+  for (let i = 1; i <= 7; i++) {
+    const b = document.createElement('button');
+    b.className = 'lvl-btn';
+    b.style.setProperty('--lc', levels[i].color);
+    b.dataset.l = i;
+    b.innerHTML = `<span class="lvl-num">${i}</span><span class="lvl-word">${levels[i].word}</span>`;
+    b.onclick = () => pickLevel(i, b);
+    grid.appendChild(b);
+  }
+}
+
+// ── Booking helpers ───────────────────────────────────────────────────────────
+function pickLevel(n, btn) {
+  selLevel = n;
+  document.querySelectorAll('.lvl-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  const d = document.getElementById('ldesc');
+  d.innerHTML = `<strong>Level ${n} — ${levels[n].word}:</strong> ${levels[n].desc}`;
+  d.classList.add('show');
+  document.getElementById('e-level').classList.remove('show');
+}
+
+function selType(tile) {
+  document.querySelectorAll('.type-tile').forEach(t => t.classList.remove('sel'));
+  tile.classList.add('sel');
+  selTile = tile;
+  document.getElementById('amb-icon').textContent  = tile.dataset.ambIcon;
+  document.getElementById('amb-title').textContent = tile.dataset.amb;
+  document.getElementById('amb-desc').textContent  = tile.dataset.ambDesc;
+  document.getElementById('amb-info').classList.add('show');
+  const isOther = tile.dataset.other === 'true';
+  document.getElementById('desc-required').classList.toggle('show', isOther);
+  document.getElementById('desc-toggle').style.display = isOther ? 'none' : 'flex';
+  if (isOther) {
+    document.getElementById('desc-optional').classList.remove('show');
+    document.getElementById('dtoggle-icon').textContent = '＋';
+  }
+  document.getElementById('e-type').classList.remove('show');
+}
+
+function toggleDesc() {
+  const box = document.getElementById('desc-optional');
+  const icon = document.getElementById('dtoggle-icon');
+  icon.textContent = box.classList.toggle('show') ? '−' : '＋';
+}
+
+// ── Location Picker Map ──────────────────────────────────────────────────────
+let locPickerMap = null;
+let locPickerMarker = null;
+
+async function initLocationPicker() {
+  const mapEl = document.getElementById('loc-picker-map');
+  if (!mapEl || locPickerMap) return;
+
+  // Fetch config for centre and bbox
+  let cfg;
+  try {
+    const res = await fetch('/api/map/config');
+    cfg = await res.json();
+  } catch { return; }
+
+  locPickerMap = L.map('loc-picker-map', { zoomControl: true }).setView(cfg.centre, 14);
+  let namedRoads = []; // for search
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OSM', maxZoom: 19,
+  }).addTo(locPickerMap);
+
+  // Load roads + build search index
+  try {
+    const roadsRes = await fetch('/api/map/roads');
+    const roadsGeo = await roadsRes.json();
+    L.geoJSON(roadsGeo, {
+      style: roadStyle,
+      onEachFeature: (f, layer) => {
+        if (f.properties.name) layer.bindTooltip(f.properties.name, { sticky: true, opacity: .85 });
+      }
+    }).addTo(locPickerMap);
+
+    // Build search index: unique named roads with their midpoint
+    const seen = new Set();
+    for (const f of roadsGeo.features) {
+      const name = f.properties.name;
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      const coords = f.geometry.coordinates;
+      const mid = coords[Math.floor(coords.length / 2)];
+      namedRoads.push({ name, lat: mid[1], lon: mid[0], type: f.properties.highway });
+    }
+    namedRoads.sort((a, b) => a.name.localeCompare(b.name));
+  } catch {}
+
+  // Hospital markers + add to search
+  for (const [id, h] of Object.entries(cfg.hospitals)) {
+    const icon = L.divIcon({
+      className: '',
+      html: '<div style="font-size:20px; filter:drop-shadow(0 1px 2px rgba(0,0,0,.3));">🏥</div>',
+      iconSize: [24, 24], iconAnchor: [12, 12],
+    });
+    L.marker([h.lat, h.lon], { icon }).addTo(locPickerMap)
+      .bindTooltip(h.name, { direction: 'top', offset: [0, -10] });
+    namedRoads.push({ name: h.name, lat: h.lat, lon: h.lon, type: 'hospital' });
+  }
+
+  // Wire up search input
+  const searchInput = document.getElementById('f-loc-search');
+  const sugBox = document.getElementById('loc-suggestions');
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    if (q.length < 2) { sugBox.style.display = 'none'; return; }
+
+    const matches = namedRoads.filter(r => r.name.toLowerCase().includes(q)).slice(0, 8);
+    if (!matches.length) { sugBox.style.display = 'none'; return; }
+
+    sugBox.innerHTML = matches.map((r, i) =>
+      `<div style="padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;" onmousedown="pickSearchResult(${r.lat},${r.lon},'${escHtml(r.name)}')" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='white'">
+        <span>${escHtml(r.name)}</span>
+        <span style="font-size:10px;color:var(--light);text-transform:capitalize;">${r.type}</span>
+      </div>`
+    ).join('');
+    sugBox.style.display = 'block';
+  });
+
+  searchInput.addEventListener('blur', () => {
+    setTimeout(() => { sugBox.style.display = 'none'; }, 200);
+  });
+
+  // Ambulance markers
+  for (const [id, a] of Object.entries(cfg.ambulances)) {
+    const icon = L.divIcon({
+      className: '',
+      html: '<div style="font-size:20px; filter:drop-shadow(0 1px 2px rgba(0,0,0,.3));">🚑</div>',
+      iconSize: [24, 24], iconAnchor: [12, 12],
+    });
+    L.marker([a.lat, a.lon], { icon }).addTo(locPickerMap)
+      .bindTooltip(id, { direction: 'top', offset: [0, -10] });
+  }
+
+  // Click to pick location
+  locPickerMap.on('click', (e) => {
+    const lat = e.latlng.lat, lon = e.latlng.lng;
+    const bbox = cfg.bbox;
+    if (lat < bbox.min_lat || lat > bbox.max_lat || lon < bbox.min_lon || lon > bbox.max_lon) {
+      showToast('Please click within the service area');
+      return;
+    }
+
+    if (locPickerMarker) locPickerMap.removeLayer(locPickerMarker);
+
+    const mIcon = L.divIcon({
+      className: '',
+      html: '<div class="pulse-marker"></div>',
+      iconSize: [18, 18], iconAnchor: [9, 9],
+    });
+    locPickerMarker = L.marker([lat, lon], { icon: mIcon }).addTo(locPickerMap);
+
+    document.getElementById('f-loc').value = `GPS: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+    document.getElementById('e-loc').classList.remove('show');
+    document.getElementById('f-loc').classList.remove('err');
+  });
+}
+
+// ── Booking validation ────────────────────────────────────────────────────────
+function se(eid, fid) { document.getElementById(eid).classList.add('show');    if (fid) document.getElementById(fid).classList.add('err'); }
+function ce(eid, fid) { document.getElementById(eid).classList.remove('show'); if (fid) document.getElementById(fid).classList.remove('err'); }
+
+function val1() {
+  let ok = true;
+  if (!document.getElementById('f-name').value.trim())  { se('e-name','f-name');  ok=false; } else ce('e-name','f-name');
+  if (!document.getElementById('f-phone').value.trim()) { se('e-phone','f-phone'); ok=false; } else ce('e-phone','f-phone');
+  if (!document.getElementById('f-loc').value.trim())   { se('e-loc','f-loc');    ok=false; } else ce('e-loc','f-loc');
+  return ok;
+}
+function val2() {
+  let ok = true;
+  if (!selTile)  { se('e-type',null);  ok=false; } else ce('e-type',null);
+  if (!selLevel) { se('e-level',null); ok=false; } else ce('e-level',null);
+  if (selTile?.dataset.other === 'true' && !document.getElementById('f-desc-req').value.trim()) {
+    se('e-desc','f-desc-req'); ok=false;
+  } else ce('e-desc','f-desc-req');
+  return ok;
+}
+
+// ── Booking screen navigation ────────────────────────────────────────────────
+function showScreen(n) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('s'+n).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function setStep(a) {
+  for (let i = 1; i <= 3; i++) {
+    const ps = document.getElementById('ps'+i), pc = document.getElementById('pc'+i);
+    ps.style.opacity = '1';
+    if (i < a)      { ps.className='ps done';   pc.textContent='✓'; }
+    else if (i===a) { ps.className='ps active'; pc.textContent=i;   }
+    else            { ps.className='ps'; ps.style.opacity='.4'; pc.textContent=i; }
+  }
+  for (let i=1;i<=2;i++) document.getElementById('pl'+i).className='ps-line'+(i<a?' done':'');
+}
+function toS1() { showScreen(1); setStep(1); }
+function toS2() { if (document.getElementById('s1').classList.contains('active') && !val1()) return; showScreen(2); setStep(2); }
+function toS3() { if (!val2()) return; buildSummary(); showScreen(3); setStep(3); }
+
+// ── Summary ───────────────────────────────────────────────────────────────────
+function buildSummary() {
+  const name  = document.getElementById('f-name').value.trim();
+  const phone = document.getElementById('f-phone').value.trim();
+  const loc   = document.getElementById('f-loc').value.trim();
+  const isOther = selTile.dataset.other === 'true';
+  const desc  = isOther ? document.getElementById('f-desc-req').value.trim() : document.getElementById('f-desc-opt').value.trim();
+  const lv = levels[selLevel];
+  document.getElementById('summary').innerHTML = `
+    <div class="sum-row"><div class="sum-key">Name</div><div class="sum-val">${escHtml(name)}</div></div>
+    <div class="sum-row"><div class="sum-key">Phone</div><div class="sum-val">${escHtml(phone)}</div></div>
+    <div class="sum-row"><div class="sum-key">Location</div><div class="sum-val">${escHtml(loc)}</div></div>
+    <div class="sum-row"><div class="sum-key">Emergency</div><div class="sum-val">${escHtml(selTile.dataset.type)}</div></div>
+    <div class="sum-row"><div class="sum-key">Ambulance</div><div class="sum-val"><span class="amb-pill">${selTile.dataset.ambIcon} ${escHtml(selTile.dataset.amb)}</span></div></div>
+    <div class="sum-row"><div class="sum-key">Severity</div><div class="sum-val"><span class="lvl-pill" style="background:${lv.color}">Level ${selLevel} — ${lv.word}</span></div></div>
+    ${desc ? `<div class="sum-row"><div class="sum-key">Notes</div><div class="sum-val" style="font-weight:500">${escHtml(desc)}</div></div>` : ''}
+  `;
+}
+
+// ── Submit booking ────────────────────────────────────────────────────────────
+async function submitBooking() {
+  const btn = document.getElementById('submit-btn');
+  btn.innerHTML = '<span class="spinner"></span> Dispatching...';
+  btn.disabled = true;
+
+  const lv   = levels[selLevel];
+  const isOther = selTile.dataset.other === 'true';
+  const desc = isOther
+    ? document.getElementById('f-desc-req').value.trim()
+    : document.getElementById('f-desc-opt').value.trim();
+
+  // Parse GPS coordinates from location field for dispatch
+  const locStr = document.getElementById('f-loc').value.trim();
+  const gpsMatch = locStr.match(/GPS:\s*([\d.-]+)\s*,\s*([\d.-]+)/);
+  let dispatchLat = null, dispatchLon = null;
+  if (gpsMatch) {
+    dispatchLat = parseFloat(gpsMatch[1]);
+    dispatchLon = parseFloat(gpsMatch[2]);
+  }
+
+  // Map severity level 1-7 to dispatch categories
+  const sevMap = { 1:'MILD', 2:'MILD', 3:'MODERATE', 4:'MODERATE', 5:'URGENT', 6:'CRITICAL', 7:'CRITICAL' };
+  const dispatchSeverity = sevMap[selLevel] || 'MODERATE';
+
+  // Run real dispatch if we have GPS coordinates
+  let dispatchData = null;
+  if (dispatchLat && dispatchLon) {
+    try {
+      const dRes = await fetch('/api/map/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat: dispatchLat, lon: dispatchLon, severity: dispatchSeverity }),
+      });
+      if (dRes.ok) dispatchData = await dRes.json();
+    } catch { /* dispatch is best-effort, booking still proceeds */ }
+  }
+
+  // Use real dispatch data for unit/ETA if available, else fallback
+  const unit = dispatchData ? dispatchData.ambulance.id : unitPool[Math.floor(Math.random() * unitPool.length)];
+  const etaMin = dispatchData ? dispatchData.eta_to_patient : lv.eta;
+
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        patient_name:  document.getElementById('f-name').value.trim(),
+        patient_phone: document.getElementById('f-phone').value.trim(),
+        location:      locStr,
+        emergency_type: selTile.dataset.type,
+        ambulance_type: selTile.dataset.amb,
+        severity_level: selLevel,
+        severity_word:  lv.word,
+        description:    desc || null,
+        eta_minutes:    Math.round(etaMin),
+        unit_assigned:  unit,
+      }),
+    });
+
+    if (res.status === 401) { signOut(); return; }
+    if (!res.ok) { alert('Failed to submit booking. Please try again.'); return; }
+
+    const data = await res.json();
+
+    // Populate confirmation screen
+    document.getElementById('req-id').textContent      = data.request_id;
+    document.getElementById('eta-val').textContent     = Math.round(etaMin) + ' min';
+    document.getElementById('eta-unit').textContent    = `${selTile.dataset.amb} · Unit ${unit}`;
+    document.getElementById('tl-assigned').textContent = `${selTile.dataset.amb} (${unit}) assigned.`;
+    document.getElementById('tl-eta-txt').textContent  = Math.round(etaMin) + ' min';
+
+    if (selLevel >= 6) {
+      document.getElementById('advice-list').innerHTML = `
+        <li>If not breathing, begin CPR now. Call 108 for live guidance.</li>
+        <li>Don't leave the patient. Keep them talking if possible.</li>
+        <li>Unlock the front door and stand outside to flag the ambulance.</li>
+        <li>Do NOT give food, water or any medication.</li>
+        <li>Stay on the line — dispatcher will call back immediately.</li>
+      `;
+    }
+
+    document.getElementById('prog-wrap').style.display = 'none';
+    showScreen(4);
+    startCountdown(Math.round(etaMin));
+    setTimeout(markArrived, Math.round(etaMin) * 60 * 1000);
+
+    // Show live map with route if dispatch succeeded
+    if (dispatchData) {
+      setTimeout(() => renderDispatchMap(dispatchData), 200);
+    }
+  } catch {
+    alert('Network error. Please try again.');
+  } finally {
+    btn.innerHTML = '🚑 Send Request';
+    btn.disabled = false;
+  }
+}
+
+// ── Countdown ─────────────────────────────────────────────────────────────────
+function startCountdown(mins) {
+  let s = mins * 60;
+  tick(s);
+  const iv = setInterval(() => {
+    s--;
+    if (s <= 0) { clearInterval(iv); document.getElementById('eta-cd').textContent = 'Arriving now!'; return; }
+    tick(s);
+  }, 1000);
+}
+function tick(s) {
+  const m = Math.floor(s / 60);
+  document.getElementById('eta-cd').textContent = `${m}:${String(s % 60).padStart(2,'0')} left`;
+}
+function markArrived() {
+  const er = document.getElementById('tl-enroute');
+  er.className = 'tl done'; er.querySelector('.tl-c').textContent = '✓';
+  document.getElementById('tl-arrive').className = 'tl curr';
+  setTimeout(() => {
+    document.getElementById('tl-arrive').className = 'tl done';
+    document.getElementById('tl-arrive').querySelector('.tl-c').textContent = '✓';
+    document.getElementById('tl-care').className = 'tl curr';
+  }, 120000);
+}
+
+// ── Reset booking flow ────────────────────────────────────────────────────────
+function resetBooking() {
+  selLevel = null; selTile = null;
+  document.querySelectorAll('.type-tile').forEach(t => t.classList.remove('sel'));
+  document.querySelectorAll('.lvl-btn').forEach(b => b.classList.remove('sel'));
+  document.getElementById('f-loc').value = '';
+  document.getElementById('f-loc-search').value = '';
+  if (locPickerMarker && locPickerMap) { locPickerMap.removeLayer(locPickerMarker); locPickerMarker = null; }
+  document.getElementById('f-desc-req').value = '';
+  document.getElementById('f-desc-opt').value = '';
+  document.getElementById('amb-info').classList.remove('show');
+  document.getElementById('ldesc').classList.remove('show');
+  document.getElementById('desc-required').classList.remove('show');
+  document.getElementById('desc-optional').classList.remove('show');
+  document.getElementById('prog-wrap').style.display = '';
+  document.getElementById('map-result-container').innerHTML = '';
+  // Destroy map so it gets recreated fresh next time
+  if (dispatchMap) { dispatchMap.remove(); dispatchMap = null; }
+  prefillBookingForm();
+  toS1();
+}
+
+function pickSearchResult(lat, lon, name) {
+  if (!locPickerMap) return;
+
+  // Move map to the location
+  locPickerMap.setView([lat, lon], 17);
+
+  // Place marker
+  if (locPickerMarker) locPickerMap.removeLayer(locPickerMarker);
+  const mIcon = L.divIcon({
+    className: '',
+    html: '<div class="pulse-marker"></div>',
+    iconSize: [18, 18], iconAnchor: [9, 9],
+  });
+  locPickerMarker = L.marker([lat, lon], { icon: mIcon }).addTo(locPickerMap);
+
+  // Fill location fields
+  document.getElementById('f-loc').value = `GPS: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+  document.getElementById('f-loc-search').value = name;
+  document.getElementById('loc-suggestions').style.display = 'none';
+  document.getElementById('e-loc').classList.remove('show');
+  document.getElementById('f-loc').classList.remove('err');
+}
+
+// ── Live Dispatch Map ────────────────────────────────────────────────────────
+let dispatchMap = null;
+
+function roadStyle(feature) {
+  const hw = feature.properties.highway || '';
+  const styles = {
+    trunk:          { color: '#c0392b', weight: 4, opacity: 0.8 },
+    trunk_link:     { color: '#c0392b', weight: 2.5, opacity: 0.7 },
+    primary:        { color: '#e67e22', weight: 3.5, opacity: 0.8 },
+    primary_link:   { color: '#e67e22', weight: 2, opacity: 0.7 },
+    secondary:      { color: '#f39c12', weight: 3, opacity: 0.8 },
+    secondary_link: { color: '#f39c12', weight: 2, opacity: 0.7 },
+    tertiary:       { color: '#27ae60', weight: 2.5, opacity: 0.7 },
+    tertiary_link:  { color: '#27ae60', weight: 1.5, opacity: 0.6 },
+  };
+  return styles[hw] || { color: '#95a5a6', weight: 1.5, opacity: 0.5 };
+}
+
+async function renderDispatchMap(data) {
+  const mapEl = document.getElementById('dispatch-map');
+  if (!mapEl) return;
+
+  // Destroy previous map instance if any
+  if (dispatchMap) { dispatchMap.remove(); dispatchMap = null; }
+
+  // Create map centred on patient
+  dispatchMap = L.map('dispatch-map', { zoomControl: true })
+    .setView([data.patient_node.lat, data.patient_node.lon], 14);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19,
+  }).addTo(dispatchMap);
+
+  // Load road network
+  try {
+    const roadsRes = await fetch('/api/map/roads');
+    const roadsGeo = await roadsRes.json();
+    L.geoJSON(roadsGeo, {
+      style: roadStyle,
+      onEachFeature: (f, layer) => {
+        if (f.properties.name) layer.bindTooltip(f.properties.name, { sticky: true, opacity: .85 });
+      }
+    }).addTo(dispatchMap);
+  } catch { /* road layer is nice-to-have */ }
+
+  // Load hospital markers
+  try {
+    const cfgRes = await fetch('/api/map/config');
+    const cfg = await cfgRes.json();
+    for (const [id, h] of Object.entries(cfg.hospitals)) {
+      const icon = L.divIcon({
+        className: '',
+        html: '<div style="font-size:24px; filter:drop-shadow(0 1px 3px rgba(0,0,0,.3));">🏥</div>',
+        iconSize: [28, 28], iconAnchor: [14, 14],
+      });
+      L.marker([h.lat, h.lon], { icon }).addTo(dispatchMap)
+        .bindTooltip(h.name, { permanent: true, direction: 'top', offset: [0, -12] });
+    }
+  } catch {}
+
+  // Patient marker (pulsing red dot)
+  const patientIcon = L.divIcon({
+    className: '',
+    html: '<div class="pulse-marker"></div>',
+    iconSize: [18, 18], iconAnchor: [9, 9],
+  });
+  L.marker([data.patient_node.lat, data.patient_node.lon], { icon: patientIcon })
+    .addTo(dispatchMap).bindTooltip('You', { permanent: true, direction: 'top', offset: [0, -10] });
+
+  // Ambulance marker
+  const ambIcon = L.divIcon({
+    className: '',
+    html: '<div class="amb-icon-marker">🚑</div>',
+    iconSize: [26, 26], iconAnchor: [13, 13],
+  });
+  L.marker([data.ambulance.lat, data.ambulance.lon], { icon: ambIcon })
+    .addTo(dispatchMap).bindTooltip(data.ambulance.id, { direction: 'top', offset: [0, -10] });
+
+  // Route: ambulance → patient (blue dashed)
+  if (data.route_to_patient && data.route_to_patient.length > 1) {
+    L.polyline(data.route_to_patient, {
+      color: '#0066cc', weight: 5, opacity: 0.8, dashArray: '10, 8',
+    }).addTo(dispatchMap);
+  }
+
+  // Route: patient → hospital (green solid)
+  if (data.route_to_hospital && data.route_to_hospital.length > 1) {
+    L.polyline(data.route_to_hospital, {
+      color: '#00b894', weight: 5, opacity: 0.8,
+    }).addTo(dispatchMap);
+  }
+
+  // Fit map to show full route
+  const allCoords = [...(data.route_to_patient || []), ...(data.route_to_hospital || [])];
+  if (allCoords.length > 1) {
+    dispatchMap.fitBounds(L.latLngBounds(allCoords.map(c => [c[0], c[1]])).pad(0.15));
+  }
+
+  // Render result card below map
+  let html = '<div class="map-result"><h4>Dispatch Route</h4>';
+  html += mrRow('Ambulance', data.ambulance.id);
+  html += mrRow('ETA to You', data.eta_to_patient + ' min');
+  if (data.hospital) {
+    html += mrRow('Hospital', data.hospital.name);
+    html += mrRow('Total Trip', data.eta_total + ' min');
+    html += mrRow('Beds Available', data.hospital.beds_available);
+  }
+  if (data.doctor) html += mrRow('Doctor', data.doctor.split(' - ')[0]);
+  html += '</div>';
+  document.getElementById('map-result-container').innerHTML = html;
+}
+
+function mrRow(label, value) {
+  return '<div class="map-result-row"><span class="mr-label">' + escHtml(label) + '</span><span class="mr-value">' + escHtml(String(value)) + '</span></div>';
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  const container = document.getElementById('history-list');
+  container.innerHTML = '<div class="hist-loading">Loading...</div>';
+  try {
+    const res = await fetch('/api/bookings', { headers: authHeaders() });
+    if (res.status === 401) { signOut(); return; }
+    const bookings = await res.json();
+    renderHistory(bookings);
+  } catch {
+    container.innerHTML = '<div class="hist-loading">Failed to load history.</div>';
+  }
+}
+
+function renderHistory(bookings) {
+  const container = document.getElementById('history-list');
+  if (!bookings.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">No bookings yet</div>
+        <div class="empty-sub">Your ambulance dispatch history will appear here after your first request.</div>
+      </div>`;
+    return;
+  }
+  container.innerHTML = bookings.map(b => `
+    <div class="booking-card">
+      <div class="bk-header">
+        <span class="bk-id">${escHtml(b.request_id)}</span>
+        <span class="bk-date">${formatDate(b.created_at)}</span>
+      </div>
+      <div class="bk-type">${escHtml(b.emergency_type)}${b.ambulance_type ? ' · ' + escHtml(b.ambulance_type) : ''}</div>
+      <div class="bk-meta">
+        <span class="bk-sev" style="background:${severityColor(b.severity_level)}">Level ${b.severity_level} — ${escHtml(b.severity_word || '')}</span>
+        ${b.eta_minutes ? `<span class="bk-eta">ETA: ${b.eta_minutes} min</span>` : ''}
+        ${b.unit_assigned ? `<span class="bk-unit">Unit: ${escHtml(b.unit_assigned)}</span>` : ''}
+      </div>
+      ${b.location ? `<div class="bk-loc">📍 ${escHtml(b.location)}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })
+    + ' ' + d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+}
+
+function severityColor(level) {
+  const colors = { 1:'#27ae60',2:'#2ecc71',3:'#f1c40f',4:'#f39c12',5:'#e67e22',6:'#e74c3c',7:'#922b21' };
+  return colors[level] || '#888';
+}
+
+// ── Preferences ───────────────────────────────────────────────────────────────
+function loadPreferences() {
+  if (!userProfile) return;
+  document.getElementById('pref-email').value = userProfile.email || '';
+  document.getElementById('pref-name').value  = userProfile.full_name || '';
+  document.getElementById('pref-phone').value = userProfile.phone || '';
+  const m = userProfile.medical || {};
+  document.getElementById('pref-blood').value       = m.blood_type              || '';
+  document.getElementById('pref-allergies').value   = m.allergies               || '';
+  document.getElementById('pref-medications').value = m.medications             || '';
+  document.getElementById('pref-conditions').value  = m.conditions              || '';
+  document.getElementById('pref-ec-name').value     = m.emergency_contact_name  || '';
+  document.getElementById('pref-ec-phone').value    = m.emergency_contact_phone || '';
+}
+
+async function savePreferences() {
+  const btn = document.getElementById('pref-save-btn');
+  btn.innerHTML = '<span class="spinner"></span> Saving...';
+  btn.disabled = true;
+  document.getElementById('pref-error').classList.remove('show');
+  document.getElementById('pref-success').classList.remove('show');
+
+  try {
+    const res = await fetch('/api/user/profile', {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        full_name:               document.getElementById('pref-name').value.trim()  || null,
+        phone:                   document.getElementById('pref-phone').value.trim() || null,
+        blood_type:              document.getElementById('pref-blood').value        || null,
+        allergies:               document.getElementById('pref-allergies').value.trim()   || null,
+        medications:             document.getElementById('pref-medications').value.trim() || null,
+        conditions:              document.getElementById('pref-conditions').value.trim()  || null,
+        emergency_contact_name:  document.getElementById('pref-ec-name').value.trim()    || null,
+        emergency_contact_phone: document.getElementById('pref-ec-phone').value.trim()   || null,
+      }),
+    });
+    if (res.status === 401) { signOut(); return; }
+    if (!res.ok) {
+      const data = await res.json();
+      const el = document.getElementById('pref-error');
+      el.textContent = data.error;
+      el.classList.add('show');
+      return;
+    }
+    // Refresh local profile state
+    await loadProfile();
+    document.getElementById('pref-success').classList.add('show');
+    setTimeout(() => document.getElementById('pref-success').classList.remove('show'), 3000);
+    // Update nav user display
+    const user = JSON.parse(localStorage.getItem('medirush_user') || '{}');
+    if (userProfile?.full_name) user.full_name = userProfile.full_name;
+    localStorage.setItem('medirush_user', JSON.stringify(user));
+  } catch {
+    const el = document.getElementById('pref-error');
+    el.textContent = 'Network error. Please try again.';
+    el.classList.add('show');
+  } finally {
+    btn.innerHTML = 'Save Changes';
+    btn.disabled = false;
+  }
+}
+
+// ── Utility ───────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MediRush — Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* ── Auth layout ── */
+  .auth-wrap {
+    min-height: 100vh; display: flex; flex-direction: column;
+  }
+  .auth-body {
+    flex: 1; display: flex; align-items: flex-start; justify-content: center;
+    padding: 24px 16px 60px;
+  }
+  .auth-box { width: 100%; max-width: 440px; }
+
+  /* ── Auth header ── */
+  .auth-header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 14px 20px; display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  }
+  .brand-icon {
+    width: 36px; height: 36px; background: var(--red);
+    border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 19px;
+  }
+  .brand-name { font-family: 'DM Serif Display', serif; font-size: 19px; line-height: 1.1; }
+  .brand-sub  { font-size: 11px; color: var(--light); }
+
+  /* ── Step indicator ── */
+  .step-indicator {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 18px;
+  }
+  .step-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--border);
+    transition: background .25s;
+  }
+  .step-dot.active { background: var(--red); width: 20px; border-radius: 4px; }
+  .step-dot.done   { background: var(--green); }
+  .step-label { font-size: 12px; color: var(--light); margin-left: 4px; }
+
+  /* ── OTP input ── */
+  .otp-wrap { display: flex; gap: 8px; justify-content: center; margin: 18px 0; }
+  .otp-digit {
+    width: 48px; height: 56px; border: 2px solid var(--border); border-radius: 10px;
+    font-family: 'DM Serif Display', serif; font-size: 26px; font-weight: 700;
+    text-align: center; outline: none; background: white; color: var(--text);
+    transition: border-color .2s; caret-color: var(--red);
+  }
+  .otp-digit:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(214,48,49,.08); }
+  .otp-digit.filled { border-color: var(--mid); }
+  .otp-digit.err    { border-color: var(--red); }
+
+  /* ── Auth link ── */
+  .auth-link {
+    text-align: center; margin-top: 16px; font-size: 14px; color: var(--mid);
+  }
+  .auth-link a {
+    color: var(--red); font-weight: 600; text-decoration: none; cursor: pointer;
+  }
+  .auth-link a:hover { text-decoration: underline; }
+
+  /* ── Resend row ── */
+  .resend-row {
+    text-align: center; margin-top: 8px; font-size: 13px; color: var(--light);
+  }
+  .resend-btn {
+    background: none; border: none; color: var(--blue); font-size: 13px;
+    font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    padding: 0;
+  }
+  .resend-btn:hover { text-decoration: underline; }
+  .resend-btn:disabled { color: var(--light); cursor: not-allowed; text-decoration: none; }
+
+  /* ── Medical profile card ── */
+  .profile-hint {
+    background: var(--blue-bg); border: 1px solid #cce0ff;
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 18px;
+    font-size: 13px; color: var(--mid); line-height: 1.5;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .profile-hint-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+</style>
+</head>
+<body>
+
+<div class="auth-wrap">
+  <div class="banner">🚨 Life-threatening? Call <a href="tel:108">108</a> — don't wait.</div>
+
+  <header class="auth-header">
+    <div class="brand-icon">🚑</div>
+    <div>
+      <div class="brand-name">MediRush</div>
+      <div class="brand-sub">Smart Ambulance Dispatch</div>
+    </div>
+  </header>
+
+  <div class="auth-body">
+    <div class="auth-box">
+
+      <!-- ══ VIEW: Login ══ -->
+      <div id="view-login">
+        <div class="card">
+          <div class="card-title">Welcome back</div>
+          <div class="card-sub">Sign in to access your dashboard.</div>
+
+          <div class="fg">
+            <div class="fl">📧 Email</div>
+            <input class="fi" id="login-email" type="email" placeholder="you@example.com" autocomplete="email">
+          </div>
+          <div class="fg">
+            <div class="fl">🔒 Password</div>
+            <input class="fi" id="login-password" type="password" placeholder="Your password" autocomplete="current-password">
+          </div>
+
+          <div class="alert alert-error" id="login-error"></div>
+
+          <div class="btn-row">
+            <button class="btn-primary" id="login-btn" onclick="login()">Sign In</button>
+          </div>
+        </div>
+        <div class="auth-link">
+          Don't have an account? <a onclick="showView('view-reg1')">Create one</a>
+        </div>
+      </div>
+
+      <!-- ══ VIEW: Register — Step 1 (email + password) ══ -->
+      <div id="view-reg1" hidden>
+        <div class="card">
+          <div class="card-title">Create account</div>
+          <div class="card-sub">Step 1 of 3 — Account credentials</div>
+          <div class="step-indicator">
+            <div class="step-dot active" id="rdot1"></div>
+            <div class="step-dot"        id="rdot2"></div>
+            <div class="step-dot"        id="rdot3"></div>
+            <span class="step-label">Account</span>
+          </div>
+
+          <div class="fg">
+            <div class="fl">📧 Email address</div>
+            <input class="fi" id="reg-email" type="email" placeholder="you@example.com" autocomplete="email">
+            <div class="ferr" id="err-reg-email">Please enter a valid email.</div>
+          </div>
+          <div class="fg">
+            <div class="fl">🔒 Password</div>
+            <input class="fi" id="reg-password" type="password" placeholder="At least 6 characters" autocomplete="new-password">
+            <div class="ferr" id="err-reg-password">Password must be at least 6 characters.</div>
+          </div>
+          <div class="fg">
+            <div class="fl">🔒 Confirm password</div>
+            <input class="fi" id="reg-confirm" type="password" placeholder="Repeat password" autocomplete="new-password">
+            <div class="ferr" id="err-reg-confirm">Passwords do not match.</div>
+          </div>
+
+          <div class="alert alert-error" id="reg1-error"></div>
+
+          <div class="btn-row">
+            <button class="btn-primary" id="reg1-btn" onclick="sendOTP()">Send Verification Code →</button>
+          </div>
+        </div>
+        <div class="auth-link">
+          Already have an account? <a onclick="showView('view-login')">Sign in</a>
+        </div>
+      </div>
+
+      <!-- ══ VIEW: Register — Step 2 (OTP) ══ -->
+      <div id="view-reg2" hidden>
+        <div class="card">
+          <div class="card-title">Verify your email</div>
+          <div class="card-sub" id="otp-sub">We sent a 6-digit code to your email address.</div>
+          <div class="step-indicator">
+            <div class="step-dot done"   id="rdot1b"></div>
+            <div class="step-dot active" id="rdot2b"></div>
+            <div class="step-dot"        id="rdot3b"></div>
+            <span class="step-label">Verify email</span>
+          </div>
+
+          <div class="otp-wrap" id="otp-inputs"></div>
+          <div class="alert alert-error" id="reg2-error"></div>
+
+          <div class="btn-row">
+            <button class="btn-secondary" onclick="showView('view-reg1')">← Back</button>
+            <button class="btn-primary" id="reg2-btn" onclick="verifyOTP()">Verify →</button>
+          </div>
+
+          <div class="resend-row">
+            Didn't receive it?
+            <button class="resend-btn" id="resend-btn" onclick="resendOTP()">Resend code</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ VIEW: Register — Step 3 (medical profile) ══ -->
+      <div id="view-reg3" hidden>
+        <div class="card">
+          <div class="card-title">Your health profile</div>
+          <div class="card-sub">Step 3 of 3 — This is securely stored and shared with paramedics in an emergency.</div>
+          <div class="step-indicator">
+            <div class="step-dot done"   ></div>
+            <div class="step-dot done"   ></div>
+            <div class="step-dot active" ></div>
+            <span class="step-label">Health profile</span>
+          </div>
+
+          <div class="profile-hint">
+            <div class="profile-hint-icon">🛡️</div>
+            <div>Your medical information is encrypted and only used to assist emergency responders. You can update it any time from Settings.</div>
+          </div>
+
+          <div class="frow">
+            <div class="fg">
+              <div class="fl">👤 Full Name <span style="color:var(--red)">*</span></div>
+              <input class="fi" id="reg-name" type="text" placeholder="John Smith" autocomplete="name">
+              <div class="ferr" id="err-reg-name">Full name is required.</div>
+            </div>
+            <div class="fg">
+              <div class="fl">📞 Phone <span style="color:var(--red)">*</span></div>
+              <input class="fi" id="reg-phone" type="tel" placeholder="+91 98765 43210" autocomplete="tel">
+              <div class="ferr" id="err-reg-phone">Phone number is required.</div>
+            </div>
+          </div>
+
+          <div class="fg">
+            <div class="fl">🩸 Blood Type</div>
+            <select class="fselect" id="reg-blood">
+              <option value="">Select blood type</option>
+              <option>A+</option><option>A−</option>
+              <option>B+</option><option>B−</option>
+              <option>AB+</option><option>AB−</option>
+              <option>O+</option><option>O−</option>
+              <option>Unknown</option>
+            </select>
+          </div>
+
+          <div class="fg">
+            <div class="fl">⚠️ Known Allergies</div>
+            <textarea class="fta" id="reg-allergies" placeholder="e.g. Penicillin, peanuts, latex — or leave blank if none" style="min-height:70px"></textarea>
+          </div>
+
+          <div class="fg">
+            <div class="fl">💊 Current Medications</div>
+            <textarea class="fta" id="reg-medications" placeholder="e.g. Metformin 500 mg, Aspirin 75 mg — or leave blank if none" style="min-height:70px"></textarea>
+          </div>
+
+          <div class="fg">
+            <div class="fl">🏥 Medical Conditions</div>
+            <textarea class="fta" id="reg-conditions" placeholder="e.g. Type 2 diabetes, hypertension, asthma — or leave blank if none" style="min-height:70px"></textarea>
+          </div>
+
+          <div class="sec-divider">Emergency Contact</div>
+          <div class="frow">
+            <div class="fg">
+              <div class="fl">👤 Contact Name</div>
+              <input class="fi" id="reg-ec-name" type="text" placeholder="Jane Smith">
+            </div>
+            <div class="fg">
+              <div class="fl">📞 Contact Phone</div>
+              <input class="fi" id="reg-ec-phone" type="tel" placeholder="+91 98765 00000">
+            </div>
+          </div>
+
+          <div class="alert alert-error"   id="reg3-error"></div>
+
+          <div class="btn-row">
+            <button class="btn-secondary" onclick="showView('view-reg2')">← Back</button>
+            <button class="btn-primary" id="reg3-btn" onclick="completeProfile()">🚑 Complete Registration</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /auth-box -->
+  </div><!-- /auth-body -->
+</div><!-- /auth-wrap -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+let _regEmail = '';
+
+// ── On load: redirect if already authenticated ─────────────────────────────────
+window.addEventListener('load', () => {
+  if (localStorage.getItem('medirush_token')) {
+    window.location.href = '/app.html';
+  }
+  buildOTPInputs();
+});
+
+// ── View switching ─────────────────────────────────────────────────────────────
+function showView(name) {
+  ['view-login','view-reg1','view-reg2','view-reg3'].forEach(id => {
+    document.getElementById(id).hidden = (id !== name);
+  });
+  clearAlerts();
+}
+
+function clearAlerts() {
+  document.querySelectorAll('.alert').forEach(el => el.classList.remove('show'));
+  document.querySelectorAll('.ferr').forEach(el => el.classList.remove('show'));
+  document.querySelectorAll('.fi, .fta').forEach(el => el.classList.remove('err'));
+}
+
+function showAlert(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function fieldErr(errId, fieldId) {
+  document.getElementById(errId).classList.add('show');
+  if (fieldId) document.getElementById(fieldId).classList.add('err');
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (loading) {
+    btn._text = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner"></span>';
+    btn.disabled = true;
+  } else {
+    btn.innerHTML = btn._text;
+    btn.disabled = false;
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Build OTP digit inputs ─────────────────────────────────────────────────────
+function buildOTPInputs() {
+  const wrap = document.getElementById('otp-inputs');
+  wrap.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const inp = document.createElement('input');
+    inp.type = 'tel';
+    inp.maxLength = 1;
+    inp.className = 'otp-digit';
+    inp.inputMode = 'numeric';
+    inp.pattern = '[0-9]';
+    inp.dataset.idx = i;
+
+    inp.addEventListener('input', e => {
+      const val = e.target.value.replace(/\D/g,'');
+      e.target.value = val;
+      if (val && i < 5) {
+        wrap.querySelectorAll('.otp-digit')[i+1].focus();
+      }
+      updateOTPFilled();
+    });
+
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !e.target.value && i > 0) {
+        wrap.querySelectorAll('.otp-digit')[i-1].focus();
+      }
+    });
+
+    inp.addEventListener('paste', e => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
+      const digits = wrap.querySelectorAll('.otp-digit');
+      for (let j = 0; j < text.length && j < 6; j++) {
+        digits[j].value = text[j];
+      }
+      if (text.length > 0) digits[Math.min(text.length, 5)].focus();
+      updateOTPFilled();
+    });
+
+    wrap.appendChild(inp);
+  }
+}
+
+function updateOTPFilled() {
+  document.querySelectorAll('.otp-digit').forEach(d => {
+    d.classList.toggle('filled', d.value !== '');
+    d.classList.remove('err');
+  });
+}
+
+function getOTPValue() {
+  return Array.from(document.querySelectorAll('.otp-digit')).map(d => d.value).join('');
+}
+
+function setOTPError() {
+  document.querySelectorAll('.otp-digit').forEach(d => d.classList.add('err'));
+}
+
+// ── Login ──────────────────────────────────────────────────────────────────────
+async function login() {
+  clearAlerts();
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if (!email || !password) { showAlert('login-error', 'Please fill in all fields.'); return; }
+
+  setLoading('login-btn', true);
+  try {
+    const res  = await fetch('/api/auth/login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showAlert('login-error', data.error); return; }
+    localStorage.setItem('medirush_token', data.token);
+    localStorage.setItem('medirush_user',  JSON.stringify(data.user));
+    window.location.href = '/app.html';
+  } catch {
+    showAlert('login-error', 'Network error. Please try again.');
+  } finally {
+    setLoading('login-btn', false);
+  }
+}
+
+// Allow Enter key to submit on login form
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const vLogin = document.getElementById('view-login');
+  const vReg2  = document.getElementById('view-reg2');
+  if (!vLogin.hidden) login();
+  if (!vReg2.hidden)  verifyOTP();
+});
+
+// ── Register Step 1: send OTP ──────────────────────────────────────────────────
+async function sendOTP() {
+  clearAlerts();
+  const email   = document.getElementById('reg-email').value.trim();
+  const pass    = document.getElementById('reg-password').value;
+  const confirm = document.getElementById('reg-confirm').value;
+
+  let valid = true;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { fieldErr('err-reg-email','reg-email'); valid=false; }
+  if (pass.length < 6)       { fieldErr('err-reg-password','reg-password'); valid=false; }
+  if (pass !== confirm)      { fieldErr('err-reg-confirm','reg-confirm');   valid=false; }
+  if (!valid) return;
+
+  setLoading('reg1-btn', true);
+  try {
+    const res  = await fetch('/api/auth/register', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password: pass }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showAlert('reg1-error', data.error); return; }
+    _regEmail = email;
+    document.getElementById('otp-sub').textContent =
+      `We sent a 6-digit code to ${email}. Check your inbox (or server console in dev mode).`;
+    buildOTPInputs();
+    showView('view-reg2');
+    setTimeout(() => document.querySelector('.otp-digit')?.focus(), 100);
+  } catch {
+    showAlert('reg1-error', 'Network error. Please try again.');
+  } finally {
+    setLoading('reg1-btn', false);
+  }
+}
+
+// ── Register Step 2: verify OTP ────────────────────────────────────────────────
+async function verifyOTP() {
+  clearAlerts();
+  const otp = getOTPValue();
+  if (otp.length < 6) {
+    setOTPError();
+    showAlert('reg2-error', 'Please enter the full 6-digit code.');
+    return;
+  }
+  setLoading('reg2-btn', true);
+  try {
+    const res  = await fetch('/api/auth/verify-otp', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email: _regEmail, otp }),
+    });
+    const data = await res.json();
+    if (!res.ok) { setOTPError(); showAlert('reg2-error', data.error); return; }
+    showView('view-reg3');
+    document.getElementById('reg-name').focus();
+  } catch {
+    showAlert('reg2-error', 'Network error. Please try again.');
+  } finally {
+    setLoading('reg2-btn', false);
+  }
+}
+
+// ── Resend OTP ─────────────────────────────────────────────────────────────────
+async function resendOTP() {
+  const btn = document.getElementById('resend-btn');
+  btn.disabled = true;
+  try {
+    const regEmail = document.getElementById('reg-email').value.trim();
+    const regPass  = document.getElementById('reg-password').value;
+    await fetch('/api/auth/register', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email: _regEmail || regEmail, password: regPass }),
+    });
+    showToast('Code resent!');
+    buildOTPInputs();
+    clearAlerts();
+    setTimeout(() => document.querySelector('.otp-digit')?.focus(), 100);
+    // Cooldown 30s
+    let cd = 30;
+    btn.textContent = `Resend (${cd}s)`;
+    const iv = setInterval(() => {
+      cd--;
+      if (cd <= 0) { clearInterval(iv); btn.textContent = 'Resend code'; btn.disabled = false; }
+      else btn.textContent = `Resend (${cd}s)`;
+    }, 1000);
+  } catch {
+    btn.disabled = false;
+  }
+}
+
+// ── Register Step 3: complete profile ─────────────────────────────────────────
+async function completeProfile() {
+  clearAlerts();
+  const fullName = document.getElementById('reg-name').value.trim();
+  const phone    = document.getElementById('reg-phone').value.trim();
+
+  let valid = true;
+  if (!fullName) { fieldErr('err-reg-name','reg-name');   valid=false; }
+  if (!phone)    { fieldErr('err-reg-phone','reg-phone'); valid=false; }
+  if (!valid) return;
+
+  setLoading('reg3-btn', true);
+  try {
+    const res  = await fetch('/api/auth/complete-profile', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        email:                    _regEmail,
+        full_name:                fullName,
+        phone,
+        blood_type:               document.getElementById('reg-blood').value      || null,
+        allergies:                document.getElementById('reg-allergies').value.trim()   || null,
+        medications:              document.getElementById('reg-medications').value.trim() || null,
+        conditions:               document.getElementById('reg-conditions').value.trim()  || null,
+        emergency_contact_name:   document.getElementById('reg-ec-name').value.trim()    || null,
+        emergency_contact_phone:  document.getElementById('reg-ec-phone').value.trim()   || null,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showAlert('reg3-error', data.error); return; }
+    localStorage.setItem('medirush_token', data.token);
+    localStorage.setItem('medirush_user',  JSON.stringify(data.user));
+    window.location.href = '/app.html';
+  } catch {
+    showAlert('reg3-error', 'Network error. Please try again.');
+  } finally {
+    setLoading('reg3-btn', false);
+  }
+}
+</script>
+</body>
+</html>
